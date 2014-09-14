@@ -40,34 +40,32 @@ distance(S1, S2) ->
 find_matching_chars(_L1, _L1, _L2, _S1, _S2, _MaxDist, PrevPos, C, T) ->
 	{PrevPos, C, T};
 
-find_matching_chars(I, L1, L2, S1, S2, MaxDist, PrevPos, C, T) ->
-	S1I = string:substr(S1, I+1, 1),
+find_matching_chars(I, L1, L2, [S1I|S1R], S2, MaxDist, PrevPos, C, T) ->
 	{PrevPosNew, CNew, TNew} = compare_chars(max(0, I - MaxDist), min(L2, I + MaxDist), S1I, S2, PrevPos, C, T),
-	find_matching_chars(I+1, L1, L2, S1, S2, MaxDist, PrevPosNew, CNew, TNew).
+	find_matching_chars(I+1, L1, L2, S1R, S2, MaxDist, PrevPosNew, CNew, TNew).
 
 compare_chars(_Max, _Max, _S1I, _S2, PrevPos, C, T) ->
 	{PrevPos, C, T};
 
-compare_chars(J, Max, S1I, S2, PrevPos, C, T) ->
-	S2J = string:substr(S2, J+1, 1),
+compare_chars(J, Max, S1I, [S2J|S2R], PrevPos, C, T) ->
 	if (S1I == S2J) ->
-		   if (PrevPos /= -1) and (J < PrevPos) ->
-				  TNew = T + 1;
-			  true ->
-				  TNew = T
-		   end,
-		   {J, C+1, TNew};
-	   true ->
-		   compare_chars(J+1, Max, S1I, S2, PrevPos, C, T)
+		if (PrevPos /= -1) and (J < PrevPos) ->
+			TNew = T + 1;
+		true ->
+			TNew = T
+		end,
+		{J, C+1, TNew};
+	true ->
+		compare_chars(J+1, Max, S1I, S2R, PrevPos, C, T)
 	end.
 
 setup(S1, S2) -> 
-	L1 = string:len(S1),
+	L1 = length(S1),
 	L2 = string:len(S2),
 	if (L1 > L2) ->
-		   {S2, S1, L2, L1};
-	   true ->
-		   {S1, S2, L1, L2}
+		{S2, S1, L2, L1};
+	true ->
+		{S1, S2, L1, L2}
 	end.
 
 get_prefix_len(P, Last, _S1, _S2) when P == Last ->
@@ -77,7 +75,7 @@ get_prefix_len(P, Last, S1, S2) ->
 	S1LPos = string:substr(S1, P+1, 1),
 	S2LPos = string:substr(S2, P+1, 1),
 	if (S1LPos == S2LPos) ->
-		   get_prefix_len(P+1, Last, S1, S1);
-	   true ->
-		   P
+		get_prefix_len(P+1, Last, S1, S1);
+	true ->
+		P
 	end.
