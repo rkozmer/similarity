@@ -68,14 +68,11 @@ setup(S1, S2) ->
 		{S1, S2, L1, L2}
 	end.
 
-get_prefix_len(P, Last, _S1, _S2) when P == Last ->
-	P;
+get_prefix_len(Last, Last, _S1, _S2) ->
+	Last;
 
-get_prefix_len(P, Last, S1, S2) ->
-	S1LPos = string:substr(S1, P+1, 1),
-	S2LPos = string:substr(S2, P+1, 1),
-	if (S1LPos == S2LPos) ->
-		get_prefix_len(P+1, Last, S1, S1);
-	true ->
-		P
-	end.
+get_prefix_len(P, Last, [S1P|S1R], [S1P|S2R]) ->
+	get_prefix_len(P+1, Last, S1R, S2R);
+	
+get_prefix_len(P, _Last, _S1, _S2) ->
+	P.
