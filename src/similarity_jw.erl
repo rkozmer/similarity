@@ -3,8 +3,6 @@
 
 -module(similarity_jw).
 
--include_lib("eunit/include/eunit.hrl").
-
 %% ====================================================================
 %% API functions
 %% ====================================================================
@@ -18,16 +16,16 @@ proximity("", _S2) -> 0.0;
 
 proximity(_S1, "") -> 0.0;
 
-proximity(S1T, S2T) ->	
-	{S1, S2, Len1, Len2} = setup(S1T, S2T),
+proximity(S1T, S2T) ->
+	{S1, S2, Len1, Len2} = reorder(S1T, S2T, length(S1T), length(S2T)),
 	MaxDist = trunc(Len1 / 2),
-	{_PrevPos, CommonChars, Transpositions} = find_matching_chars(0, Len1, Len2, S1, S2, MaxDist, -1, 0, 0),
-	if (CommonChars == 0) ->
-		   0.0;
-	   true ->
-		   Score = (CommonChars/Len1 + CommonChars/Len2 + (CommonChars-Transpositions) / CommonChars) / 3.0,
-		   PrefixLen = get_prefix_len(0, min(?NUM_CHARS, Len1), S1, S2),
-		   Score + (PrefixLen * (1 - Score)) / 10
+	case find_matching_chars(0, Len1, Len2, S1, S2, MaxDist, -1, 0, 0) of
+		{0, _} ->
+			0.0;
+		{CommonChars, Transpositions} ->
+			Score = (CommonChars/Len1 + CommonChars/Len2 + (CommonChars-Transpositions) / CommonChars) / 3.0,
+			PrefixLen = get_prefix_len(0, min(?NUM_CHARS, Len1), S1, S2),
+			Score + (PrefixLen * (1 - Score)) / 10
 	end.	
 
 distance(S1, S2) ->
@@ -37,36 +35,36 @@ distance(S1, S2) ->
 %% Internal functions
 %% ====================================================================
 
-find_matching_chars(_L1, _L1, _L2, _S1, _S2, _MaxDist, PrevPos, C, T) ->
-	{PrevPos, C, T};
+find_matching_chars(_L1, _L1, _L2, _S1, _S2, _MaxDist, _PrevPos, C, T) ->
+	{C, T};
 
 find_matching_chars(I, L1, L2, [S1I|S1R], S2, MaxDist, PrevPos, C, T) ->
 	{PrevPosNew, CNew, TNew} = compare_chars(max(0, I - MaxDist), min(L2, I + MaxDist), S1I, S2, PrevPos, C, T),
 	find_matching_chars(I+1, L1, L2, S1R, S2, MaxDist, PrevPosNew, CNew, TNew).
 
+
 compare_chars(_Max, _Max, _S1I, _S2, PrevPos, C, T) ->
 	{PrevPos, C, T};
 
-compare_chars(J, Max, S1I, [S2J|S2R], PrevPos, C, T) ->
-	if (S1I == S2J) ->
-		if (PrevPos /= -1) and (J < PrevPos) ->
-			TNew = T + 1;
-		true ->
-			TNew = T
-		end,
-		{J, C+1, TNew};
-	true ->
-		compare_chars(J+1, Max, S1I, S2R, PrevPos, C, T)
-	end.
+compare_chars(J, _Max, _S1I, [_S1I|_], -1, C, T) ->
+	{J, C+1, T};
 
-setup(S1, S2) -> 
-	L1 = length(S1),
-	L2 = string:len(S2),
-	if (L1 > L2) ->
-		{S2, S1, L2, L1};
-	true ->
-		{S1, S2, L1, L2}
-	end.
+compare_chars(J, _Max, _S1I, [_S1I|_], PrevPos, C, T) when J < PrevPos ->
+	{J, C+1, T+1};
+
+compare_chars(J, _Max, _S1I, [_S1I|_], _PrevPos, C, T) ->
+	{J, C+1, T};
+
+compare_chars(J, Max, S1I, [_S2J|S2R], PrevPos, C, T) ->
+	compare_chars(J+1, Max, S1I, S2R, PrevPos, C, T).
+
+
+reorder(S1, S2, L1, L2) when L1 > L2 -> 
+	{S2, S1, L2, L1};
+
+reorder(S1, S2, L1, L2) ->
+	{S1, S2, L1, L2}.
+
 
 get_prefix_len(Last, Last, _S1, _S2) ->
 	Last;
